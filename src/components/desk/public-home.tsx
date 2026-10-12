@@ -285,10 +285,24 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
                 Choose a length.
               </h2>
             </div>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              Prices are set by {settings.traderName} and shown in US dollars. The monthly figure is
-              the plan price divided by its length.
-            </p>
+            <div className="max-w-sm text-sm leading-6 text-muted-foreground">
+              <p>
+                Prices are set by {settings.traderName} and shown in US dollars. The monthly figure
+                is the plan price divided by its length.
+              </p>
+              <p className="mt-3">
+                The broker we use is{" "}
+                <a
+                  href="https://meridiancapital.orivexcopy.com"
+                  className="text-primary underline-offset-4 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  meridiancapital.orivexcopy.com
+                </a>
+                .
+              </p>
+            </div>
           </div>
           <div className="mt-8 grid gap-px bg-border md:grid-cols-2 xl:grid-cols-4">
             {settings.plans.map((plan) => (
@@ -309,6 +323,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
                 <p className="mt-3 min-h-12 text-sm leading-6 text-muted-foreground">
                   {plan.description}
                 </p>
+                <p className="mt-3 text-sm text-primary">Live trading sessions included</p>
                 <div className="mt-7 border-t border-border pt-5">
                   <p className="display-type text-4xl text-foreground">
                     {formatUsd(plan.priceUsd)}
@@ -344,7 +359,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
               [
                 "03",
                 "Wait for confirmation",
-                "A person on the desk checks the transfer before you start.",
+                "Enrolment starts after payment is confirmed.",
               ],
             ].map(([step, title, body]) => (
               <li key={step} className="bg-background p-6">
@@ -465,7 +480,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
               ],
               [
                 "How does payment work?",
-                "Choose a plan, send the amount to the published wallet, and include the reference. A person confirms the transfer before mentorship starts.",
+                "Choose a plan, send the amount to the published wallet, and include the reference. Enrolment starts after payment is confirmed.",
               ],
               [
                 "Can a transfer be reversed?",

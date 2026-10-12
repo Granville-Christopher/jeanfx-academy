@@ -169,7 +169,7 @@ export const defaultSiteSettings: SiteSettings = {
     {
       value: "Manual",
       label: "Payment check",
-      detail: "Enrolment starts after a person confirms the transfer.",
+      detail: "Enrolment starts after payment is confirmed.",
     },
   ],
   notes: [
@@ -209,7 +209,7 @@ export const defaultSiteSettings: SiteSettings = {
   }),
   wallets: [],
   paymentNote:
-    "Send the plan amount on the network printed beside the wallet. Crypto transfers cannot be reversed. Mentorship starts only after the desk confirms the payment.",
+    "Send the plan amount on the network printed beside the wallet. Crypto transfers cannot be reversed. Enrolment starts after payment is confirmed.",
 };
 
 export function formatIssue(error: z.ZodError): string {
