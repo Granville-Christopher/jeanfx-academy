@@ -18,6 +18,7 @@ import {
   amountInstruction,
   formatUsd,
   monthlyUsd,
+  payableUsd,
   paymentReference,
   type DeskPlan,
   type SiteSettings,
@@ -287,8 +288,8 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
             </div>
             <div className="max-w-sm text-sm leading-6 text-muted-foreground">
               <p>
-                Prices are set by {settings.traderName} and shown in US dollars. The monthly figure
-                is the plan price divided by its length.
+                Prices are set by {settings.traderName} and shown in US dollars. A discount leaves
+                the full price struck through. The monthly figure uses the price students pay.
               </p>
               <p className="mt-3">
                 The broker we use is{" "}
@@ -305,44 +306,57 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
             </div>
           </div>
           <div className="mt-8 grid gap-px bg-border md:grid-cols-2 xl:grid-cols-4">
-            {settings.plans.map((plan) => (
-              <article
-                key={plan.id}
-                className={`relative flex min-h-[340px] flex-col bg-background p-6 sm:p-7 ${plan.featured ? "ring-1 ring-inset ring-primary" : ""}`}
-              >
-                {plan.featured ? (
-                  <span className="absolute right-5 top-5 inline-flex items-center gap-1.5 text-[0.65rem] font-medium uppercase tracking-wide text-primary">
-                    <span className="size-1.5 rounded-full bg-primary" />
-                    Most chosen
-                  </span>
-                ) : null}
-                <p className="mb-8 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                  {plan.durationLabel}
-                </p>
-                <h3 className="display-type text-3xl text-foreground">{plan.name}</h3>
-                <p className="mt-3 min-h-12 text-sm leading-6 text-muted-foreground">
-                  {plan.description}
-                </p>
-                <p className="mt-3 text-sm text-primary">Live trading sessions included</p>
-                <div className="mt-7 border-t border-border pt-5">
-                  <p className="display-type text-4xl text-foreground">
-                    {formatUsd(plan.priceUsd)}
-                    <span className="ml-2 text-sm text-muted-foreground">USD</span>
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatUsd(monthlyUsd(plan))} per month
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant={plan.featured ? "default" : "outline"}
-                  className="mt-6 min-h-11 w-full rounded-none"
-                  onClick={() => selectPlan(plan)}
+            {settings.plans.map((plan) => {
+              const pay = payableUsd(plan);
+              const discounted = plan.discountPercent > 0 && pay < plan.priceUsd;
+              return (
+                <article
+                  key={plan.id}
+                  className={`relative flex min-h-[340px] flex-col p-6 sm:p-7 ${plan.featured ? "bg-primary/10 ring-2 ring-inset ring-primary" : "bg-background"}`}
                 >
-                  Select plan <ArrowRight aria-hidden="true" size={15} />
-                </Button>
-              </article>
-            ))}
+                  {plan.featured ? (
+                    <span className="absolute right-5 top-5 inline-flex items-center gap-1.5 border border-primary bg-primary px-2 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-primary-foreground">
+                      Recommended
+                    </span>
+                  ) : null}
+                  <p className="mb-8 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    {plan.durationLabel}
+                  </p>
+                  <h3 className="display-type text-3xl text-foreground">{plan.name}</h3>
+                  <p className="mt-3 min-h-12 text-sm leading-6 text-muted-foreground">
+                    {plan.description}
+                  </p>
+                  <p className="mt-3 text-sm text-primary">Live trading sessions included</p>
+                  <div className="mt-7 border-t border-border pt-5">
+                    {discounted ? (
+                      <p className="text-sm text-muted-foreground line-through">
+                        {formatUsd(plan.priceUsd)}
+                      </p>
+                    ) : null}
+                    <p className="display-type text-4xl text-foreground">
+                      {formatUsd(discounted ? pay : plan.priceUsd)}
+                      <span className="ml-2 text-sm text-muted-foreground">USD</span>
+                    </p>
+                    {discounted ? (
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-primary">
+                        {plan.discountPercent}% off
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatUsd(monthlyUsd(plan))} per month
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={plan.featured ? "default" : "outline"}
+                    className="mt-6 min-h-11 w-full rounded-none"
+                    onClick={() => selectPlan(plan)}
+                  >
+                    Select plan <ArrowRight aria-hidden="true" size={15} />
+                  </Button>
+                </article>
+              );
+            })}
           </div>
           <div className="mt-5 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
             <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0 text-primary" size={15} />
@@ -356,11 +370,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
             {[
               ["01", "Choose a length", "Select the plan that matches how long you want to study."],
               ["02", "Send the amount", "Pay the published wallet in the asset and network shown."],
-              [
-                "03",
-                "Wait for confirmation",
-                "Enrolment starts after payment is confirmed.",
-              ],
+              ["03", "Wait for confirmation", "Enrolment starts after payment is confirmed."],
             ].map(([step, title, body]) => (
               <li key={step} className="bg-background p-6">
                 <span className="text-xs text-primary">{step}</span>
@@ -386,7 +396,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
               <div>
                 <h3 className="text-lg text-foreground">
                   {selectedPlan
-                    ? `${selectedPlan.name} · ${formatUsd(selectedPlan.priceUsd)}`
+                    ? `${selectedPlan.name} · ${formatUsd(payableUsd(selectedPlan))}`
                     : "Select a plan to see payment details."}
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -446,7 +456,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
                             {wallet.address}
                           </p>
                           <p className="mt-3 text-sm leading-6 text-foreground/85">
-                            {amountInstruction(wallet.asset, selectedPlan.priceUsd)}
+                            {amountInstruction(wallet.asset, payableUsd(selectedPlan))}
                           </p>
                           <div className="mt-4">
                             <CopyButton value={wallet.address} label="Copy address" />

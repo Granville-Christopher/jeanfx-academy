@@ -12,6 +12,7 @@ import {
   initials,
   isStableAsset,
   monthlyUsd,
+  payableUsd,
   parseSettings,
   paymentReference,
 } from "@/lib/site-content";
@@ -84,6 +85,28 @@ describe("desk settings", () => {
     expect(amountInstruction("USDT", 1500)).toContain("1,500 USDT");
     expect(amountInstruction("BTC", 1500)).toContain("equivalent");
     expect(monthlyUsd({ priceUsd: 1500, months: 6 })).toBe(250);
+    expect(payableUsd({ priceUsd: 1500, discountPercent: 20 })).toBe(1200);
+    expect(monthlyUsd({ priceUsd: 1500, months: 6, discountPercent: 20 })).toBe(200);
+  });
+
+  it("keeps a saved plan that has no discount field and still recommends the half-year plan", () => {
+    const stored = {
+      ...defaultSiteSettings,
+      plans: defaultSiteSettings.plans.map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        durationLabel: plan.durationLabel,
+        months: plan.months,
+        priceUsd: plan.priceUsd,
+        description: plan.description,
+        featured: false,
+      })),
+    };
+    const parsed = parseSettings(stored);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.plans.every((plan) => plan.discountPercent === 0)).toBe(true);
+    expect(parsed.data.plans.find((plan) => plan.featured)?.id).toBe("half-year");
   });
 
   it("builds a reference from the trader and the plan", () => {

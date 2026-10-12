@@ -22,7 +22,7 @@ Open `/admin` and sign in.
 
 - **Identity** — trader name, headline, and an optional contact line. The name is used across the public site, so the same build can be run for another trader.
 - **Method** — the teaching story, three principles, and the curriculum.
-- **Plans** — names and USD prices for the one-month, three-month, six-month, and twelve-month plans. Default prices are $250, $750, $1,500, and $3,000.
+- **Plans** — names, USD prices, and a discount percentage for the one-month, three-month, six-month, and twelve-month plans. Default prices are $250, $750, $1,500, and $3,000. A discount above 0 strikes the full price through and shows the reduced amount. The six-month plan is recommended unless you mark another one.
 - **Wallets** — paste a crypto address or upload a QR image. Up to four wallets. Stablecoins show a unit amount. Bitcoin and similar assets tell the student to confirm the coin amount before sending.
 - **Results** — four public figures and three desk notes. Put only records you can explain. Sample notes are labeled as teaching examples. The footer risk line cannot be edited away.
 

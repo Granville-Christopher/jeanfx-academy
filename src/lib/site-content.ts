@@ -57,6 +57,11 @@ const planSchema = z.object({
     .int("Use a whole dollar amount.")
     .min(1, "Set a price of at least $1.")
     .max(1_000_000, "Keep the price under $1,000,000."),
+  discountPercent: z
+    .number()
+    .int("Use a whole percentage.")
+    .min(0, "Use 0 when a plan is not discounted.")
+    .max(90, "Keep a discount at 90% or less."),
   description: requiredText(180, "Add a one-line description."),
   featured: z.boolean(),
 });
@@ -205,6 +210,7 @@ export const defaultSiteSettings: SiteSettings = {
       durationLabel: plan.duration,
       months: Number.parseInt(plan.duration, 10),
       priceUsd: plan.price,
+      discountPercent: 0,
       description: planCopy[id],
       featured: Boolean(plan.featured),
     };
@@ -290,6 +296,7 @@ function preprocess(input: unknown): unknown {
         ...entry,
         priceUsd: coerceWhole(entry["priceUsd"]),
         months: coerceWhole(entry["months"]),
+        discountPercent: coerceWhole(entry["discountPercent"] ?? 0),
       };
     });
   }
@@ -326,9 +333,20 @@ export function formatUsd(amount: number): string {
   }).format(amount);
 }
 
-export function monthlyUsd(plan: Pick<DeskPlan, "priceUsd" | "months">): number {
-  if (plan.months <= 0) return plan.priceUsd;
-  return Math.round(plan.priceUsd / plan.months);
+export function payableUsd(plan: { priceUsd: number; discountPercent?: number }): number {
+  const percent = Math.min(90, Math.max(0, Math.round(plan.discountPercent ?? 0)));
+  if (percent <= 0) return plan.priceUsd;
+  return Math.max(1, Math.round((plan.priceUsd * (100 - percent)) / 100));
+}
+
+export function monthlyUsd(plan: {
+  priceUsd: number;
+  months: number;
+  discountPercent?: number;
+}): number {
+  const price = payableUsd(plan);
+  if (plan.months <= 0) return price;
+  return Math.round(price / plan.months);
 }
 
 export function initials(name: string): string {

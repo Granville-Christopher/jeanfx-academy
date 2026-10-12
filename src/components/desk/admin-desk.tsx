@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { loginDesk, logoutDeskSession, saveDeskSettings } from "@/lib/desk.functions";
-import { formatUsd, monthlyUsd, type DeskPlan, type SiteSettings } from "@/lib/site-content";
+import {
+  formatUsd,
+  monthlyUsd,
+  payableUsd,
+  type DeskPlan,
+  type SiteSettings,
+} from "@/lib/site-content";
 
 const tabs = [
   ["identity", "Identity"],
@@ -400,7 +406,7 @@ function PlanFields({
     <section className="grid gap-6">
       <Intro
         title="Plan prices"
-        body="These four lengths stay in place. Change the name, the dollar price, and the line students read. One plan can be marked as the one you recommend."
+        body="These four lengths stay in place. The price is the full amount. A discount percentage strikes that amount through on the site and shows what students pay. The six-month plan starts as the recommended plan."
       />
       <div className="grid gap-4">
         {draft.plans.map((plan) => (
@@ -422,7 +428,7 @@ function PlanFields({
                 {plan.featured ? "Recommended" : "Mark as recommended"}
               </button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <Field label="Name">
                 <Input
                   value={plan.name}
@@ -451,7 +457,13 @@ function PlanFields({
               </Field>
               <Field
                 label="Price (USD)"
-                hint={plan.months > 0 ? `${formatUsd(monthlyUsd(plan))} / month` : undefined}
+                hint={
+                  plan.discountPercent > 0
+                    ? `Students pay ${formatUsd(payableUsd(plan))}`
+                    : plan.months > 0
+                      ? `${formatUsd(monthlyUsd(plan))} / month`
+                      : undefined
+                }
               >
                 <Input
                   type="number"
@@ -461,6 +473,21 @@ function PlanFields({
                   className="rounded-none"
                   onChange={(event) =>
                     setPlan(plan.id, { priceUsd: wholeNumber(event.target.value, plan.priceUsd) })
+                  }
+                />
+              </Field>
+              <Field label="Discount %" hint="0 shows the full price only.">
+                <Input
+                  type="number"
+                  min={0}
+                  max={90}
+                  step={1}
+                  value={plan.discountPercent}
+                  className="rounded-none"
+                  onChange={(event) =>
+                    setPlan(plan.id, {
+                      discountPercent: wholeNumber(event.target.value, plan.discountPercent),
+                    })
                   }
                 />
               </Field>
