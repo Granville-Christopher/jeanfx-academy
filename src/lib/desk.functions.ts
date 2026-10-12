@@ -14,7 +14,7 @@ export const getDeskSession = createServerFn({ method: "GET" }).handler(async ()
 });
 
 export const loginDesk = createServerFn({ method: "POST" })
-  .inputValidator((data: { password?: string }) => ({
+  .validator((data: { password?: string }) => ({
     password: typeof data?.password === "string" ? data.password : "",
   }))
   .handler(async ({ data }) => loginWithPassword(data.password));
@@ -25,7 +25,7 @@ export const logoutDeskSession = createServerFn({ method: "POST" }).handler(asyn
 });
 
 export const saveDeskSettings = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => data)
+  .validator((data: unknown) => data)
   .handler(async ({ data }) => {
     const signedIn = await isDeskAdmin();
     if (!signedIn) {

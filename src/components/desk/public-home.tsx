@@ -128,7 +128,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
           className="absolute inset-0 -z-20 size-full object-cover object-[62%_42%]"
         />
         <div className="hero-veil absolute inset-0 -z-10" />
-        <div className="mx-auto grid w-full max-w-7xl items-end gap-10 px-5 pb-32 pt-20 sm:px-8 sm:pb-36 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="mx-auto grid w-full max-w-7xl items-end gap-10 px-5 pb-44 pt-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:pb-32 lg:pt-20">
           <div className="max-w-3xl">
             <p className="kicker mb-6 inline-flex items-center gap-3">
               <span className="h-px w-8 bg-primary" />
