@@ -35,6 +35,30 @@ describe("desk settings", () => {
     expect(broken.success).toBe(false);
   });
 
+  it("keeps a pasted payment link, drops a blank wallet, and rounds a decimal price", () => {
+    const parsed = parseSettings({
+      ...defaultSiteSettings,
+      plans: defaultSiteSettings.plans.map((plan) =>
+        plan.id === "monthly" ? { ...plan, priceUsd: 250.6 } : plan,
+      ),
+      wallets: [
+        { id: "blank", asset: "USDT", network: "TRC-20", address: "   ", qrImage: "" },
+        {
+          id: "link",
+          asset: "USDT",
+          network: "TRC-20",
+          address: "tron:TXYZ1234567890address?amount=10",
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.wallets).toHaveLength(1);
+    expect(parsed.data.wallets[0]?.address).toBe("TXYZ1234567890address");
+    expect(parsed.data.wallets[0]?.qrImage).toBe("");
+    expect(parsed.data.plans.find((plan) => plan.id === "monthly")?.priceUsd).toBe(251);
+  });
+
   it("strips spaces from a pasted wallet address and keeps one recommended plan", () => {
     const parsed = parseSettings({
       ...defaultSiteSettings,

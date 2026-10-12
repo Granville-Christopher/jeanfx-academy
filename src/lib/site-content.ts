@@ -22,27 +22,29 @@ const walletSchema = z.object({
     .string()
     .max(120_000, "That wallet image is too large. Upload a smaller PNG or JPG.")
     .refine(
-      (value) => value === "" || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value),
+      (value) =>
+        value === "" ||
+        /^data:image\/(png|jpe?g|webp)(?:;[^,]*)?;base64,[A-Za-z0-9+/=\s]+$/.test(value),
       "Upload a PNG or JPG of the wallet code.",
     ),
 });
 
 const principleSchema = z.object({
-  title: requiredText(48, "Add a short title."),
-  body: requiredText(180, "Add a sentence for this point."),
+  title: requiredText(80, "Add a short title."),
+  body: requiredText(500, "Add a sentence for this point."),
 });
 
 const metricSchema = z.object({
   value: requiredText(24, "Add the figure students should see."),
   label: requiredText(40, "Add a label for this figure."),
-  detail: requiredText(180, "Add one sentence explaining this figure."),
+  detail: requiredText(400, "Add one sentence explaining this figure."),
 });
 
 const noteSchema = z.object({
   market: requiredText(24, "Name the market."),
   session: requiredText(40, "Name the session or mark it as a sample."),
   title: requiredText(80, "Add a title for this note."),
-  lesson: requiredText(360, "Write the lesson from this review."),
+  lesson: requiredText(800, "Write the lesson from this review."),
 });
 
 const planSchema = z.object({
@@ -64,17 +66,17 @@ export const siteSettingsSchema = z.object({
   eyebrow: requiredText(80, "Add the short line above the headline."),
   headline: requiredText(90, "Add the headline."),
   headlineAccent: requiredText(90, "Add the accent line of the headline."),
-  subheadline: requiredText(320, "Add the sentence under the headline."),
+  subheadline: requiredText(500, "Add the sentence under the headline."),
   contactLine: z.string().trim().max(80, "Keep the contact line under 80 characters."),
   approachKicker: requiredText(60, "Add a short label for the method section."),
   approachTitle: requiredText(80, "Add a title for the method section."),
-  approachBody: requiredText(520, "Describe the method."),
-  approachNote: requiredText(320, "Add the risk note under the method."),
+  approachBody: requiredText(900, "Describe the method."),
+  approachNote: requiredText(500, "Add the risk note under the method."),
   principles: z.array(principleSchema).length(3),
   curriculum: z.array(principleSchema).length(4),
   resultsKicker: requiredText(60, "Add a short label for the results section."),
   resultsTitle: requiredText(80, "Add a title for the results section."),
-  resultsBody: requiredText(420, "Explain what the results on this page mean."),
+  resultsBody: requiredText(900, "Explain what the results on this page mean."),
   metrics: z.array(metricSchema).length(4),
   notes: z.array(noteSchema).length(3),
   plans: z
@@ -86,7 +88,7 @@ export const siteSettingsSchema = z.object({
     .string()
     .trim()
     .min(20, "Keep a payment warning students can actually read.")
-    .max(400, "Keep the payment note under 400 characters."),
+    .max(600, "Keep the payment note under 600 characters."),
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
@@ -267,21 +269,53 @@ export function sortPlans<T extends { id: PlanId }>(plans: T[]): T[] {
 
 function preprocess(input: unknown): unknown {
   if (!input || typeof input !== "object") return input;
-  const record = input as Record<string, unknown>;
+  const record = { ...(input as Record<string, unknown>) };
   const wallets = record["wallets"];
-  if (!Array.isArray(wallets)) return input;
-  return {
-    ...record,
-    wallets: wallets.map((wallet) => {
-      if (!wallet || typeof wallet !== "object") return wallet;
-      const entry = wallet as Record<string, unknown>;
-      const address = entry["address"];
+  if (Array.isArray(wallets)) {
+    record["wallets"] = wallets.flatMap((wallet) => {
+      if (!wallet || typeof wallet !== "object") return [wallet];
+      const entry = { ...(wallet as Record<string, unknown>) };
+      const address = normalizeWalletAddress(entry["address"]);
+      const qrImage = typeof entry["qrImage"] === "string" ? entry["qrImage"].trim() : "";
+      if (!address && !qrImage) return [];
+      return [{ ...entry, address, qrImage }];
+    });
+  }
+  const plans = record["plans"];
+  if (Array.isArray(plans)) {
+    record["plans"] = plans.map((plan) => {
+      if (!plan || typeof plan !== "object") return plan;
+      const entry = plan as Record<string, unknown>;
       return {
         ...entry,
-        address: typeof address === "string" ? address.replace(/\s+/g, "") : address,
+        priceUsd: coerceWhole(entry["priceUsd"]),
+        months: coerceWhole(entry["months"]),
       };
-    }),
-  };
+    });
+  }
+  return record;
+}
+
+export function normalizeWalletAddress(value: unknown): string {
+  if (typeof value !== "string") return "";
+  let address = value.replace(/[\s\u200B-\u200D\uFEFF]/g, "");
+  address = address.replace(/^[a-z][a-z0-9+.-]*:/i, "");
+  address = address.split(/[?#]/)[0] ?? address;
+  if (/^[A-Za-z0-9]+$/.test(address)) return address;
+  const runs = address.match(/[A-Za-z0-9]{8,128}/g);
+  if (runs && runs.length > 0) {
+    return [...runs].sort((left, right) => right.length - left.length)[0] ?? "";
+  }
+  return address.replace(/[^A-Za-z0-9]/g, "");
+}
+
+function coerceWhole(value: unknown): unknown {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return Math.round(parsed);
+  }
+  return value;
 }
 
 export function formatUsd(amount: number): string {

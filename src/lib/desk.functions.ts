@@ -27,14 +27,15 @@ export const logoutDeskSession = createServerFn({ method: "POST" }).handler(asyn
 export const saveDeskSettings = createServerFn({ method: "POST" })
   .validator((data: unknown) => data)
   .handler(async ({ data }) => {
-    const signedIn = await isDeskAdmin();
-    if (!signedIn) {
-      return { ok: false as const, error: "Sign in again before saving." };
-    }
     try {
+      const signedIn = await isDeskAdmin();
+      if (!signedIn) {
+        return { ok: false as const, error: "Sign in again before saving." };
+      }
       const settings = await writeSettings(data);
       return { ok: true as const, settings };
     } catch (error) {
+      console.error("Desk settings were not saved.", error);
       if (error instanceof Error && error.message === "DATABASE_UNAVAILABLE") {
         return {
           ok: false as const,
@@ -45,6 +46,16 @@ export const saveDeskSettings = createServerFn({ method: "POST" })
       const detail = (error as { detail?: string } | null)?.detail;
       if (error instanceof Error && error.message === "INVALID_SETTINGS") {
         return { ok: false as const, error: detail || "Check the form and try again." };
+      }
+      const code = (error as { code?: string } | null)?.code;
+      if (code === "EACCES" || code === "EPERM" || code === "EROFS" || code === "ENOSPC") {
+        return {
+          ok: false as const,
+          error: "The desk could not write the settings file on this server.",
+        };
+      }
+      if (error instanceof Error && /password string too short/i.test(error.message)) {
+        return { ok: false as const, error: "Sign in again before saving." };
       }
       return { ok: false as const, error: "The desk could not save those settings." };
     }

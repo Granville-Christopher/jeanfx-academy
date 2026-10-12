@@ -193,9 +193,13 @@ function DeskEditor({ initial }: { initial: SiteSettings }) {
                 }
                 setDraft(result.settings);
                 toast.success("Saved. The public site is using these settings.");
-                await router.invalidate();
-              } catch {
-                setError("The desk could not save. Try again.");
+                try {
+                  await router.invalidate();
+                } catch (refreshError) {
+                  console.error(refreshError);
+                }
+              } catch (saveError) {
+                setError(saveFailureMessage(saveError));
               } finally {
                 setSaving(false);
               }
@@ -574,7 +578,10 @@ function WalletFields({
                 </button>
               ))}
             </div>
-            <Field label="Wallet address">
+            <Field
+              label="Wallet address"
+              hint="Paste the address or a payment link. The desk keeps the address."
+            >
               <Input
                 value={wallet.address}
                 spellCheck={false}
@@ -838,6 +845,18 @@ function Field({
       <div className="mt-2">{children}</div>
     </label>
   );
+}
+
+function saveFailureMessage(error: unknown): string {
+  if (!(error instanceof Error)) return "The desk could not save. Try again.";
+  const message = error.message.replace(/\s+/g, " ").trim();
+  if (!message || message.includes("<") || message.length > 220) {
+    return "The desk could not save. Try again.";
+  }
+  if (message === "Forbidden") {
+    return "The desk blocked that save. Refresh the page and sign in again.";
+  }
+  return message;
 }
 
 function wholeNumber(value: string, fallback: number) {
