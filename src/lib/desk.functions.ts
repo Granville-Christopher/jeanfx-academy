@@ -40,7 +40,7 @@ export const saveDeskSettings = createServerFn({ method: "POST" })
         return {
           ok: false as const,
           error:
-            "The database did not accept the save. Check MONGODB_URI and the network access list.",
+            "The database refused the save. In MongoDB Atlas, open Network Access and allow this server, then try again.",
         };
       }
       const detail = (error as { detail?: string } | null)?.detail;

@@ -88,10 +88,14 @@ async function collection() {
   const uri = process.env["MONGODB_URI"]?.trim();
   if (!uri) return null;
   if (!globalForMongo.deskMongo) {
-    globalForMongo.deskMongo = import("mongodb").then(async ({ MongoClient }) => {
-      const client = new MongoClient(uri, { serverSelectionTimeoutMS: 4000 });
+    const connecting = import("mongodb").then(async ({ MongoClient }) => {
+      const client = new MongoClient(uri, { serverSelectionTimeoutMS: 8000 });
       await client.connect();
       return client;
+    });
+    globalForMongo.deskMongo = connecting;
+    connecting.catch(() => {
+      if (globalForMongo.deskMongo === connecting) delete globalForMongo.deskMongo;
     });
   }
   const client = await globalForMongo.deskMongo;

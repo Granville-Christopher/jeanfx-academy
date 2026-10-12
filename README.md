@@ -26,7 +26,7 @@ Open `/admin` and sign in.
 - **Wallets** — paste a crypto address or upload a QR image. Up to four wallets. Stablecoins show a unit amount. Bitcoin and similar assets tell the student to confirm the coin amount before sending.
 - **Results** — four public figures and three desk notes. Put only records you can explain. Sample notes are labeled as teaching examples. The footer risk line cannot be edited away.
 
-Without `MONGODB_URI`, settings are stored in `data/site-settings.json`. With `MONGODB_URI`, they are stored in the `academy.siteSettings` collection. Do not commit `.env` or the `data/` directory.
+Without `MONGODB_URI`, settings are stored in `data/site-settings.json`. With `MONGODB_URI`, they are stored in the `academy.siteSettings` collection. Atlas has to allow the server under Network Access, or the desk refuses the save. Do not commit `.env` or the `data/` directory.
 
 If a database password was ever pasted into a public README, rotate it in MongoDB Atlas and put the new URI only in `.env`.
 
