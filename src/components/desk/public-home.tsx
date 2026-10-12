@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import tradingDesk from "@/assets/jeanfx-trading-desk.jpg";
+import { DepositProofForm } from "@/components/desk/deposit-proof-form";
 import { DeskMark } from "@/components/desk/desk-mark";
 import { WalletQr } from "@/components/desk/wallet-qr";
 import { Button } from "@/components/ui/button";
@@ -370,7 +371,11 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
             {[
               ["01", "Choose a length", "Select the plan that matches how long you want to study."],
               ["02", "Send the amount", "Pay the published wallet in the asset and network shown."],
-              ["03", "Wait for confirmation", "Enrolment starts after payment is confirmed."],
+              [
+                "03",
+                "Send the proof",
+                "Upload a screenshot or PDF of the transfer. Enrolment starts after payment is confirmed.",
+              ],
             ].map(([step, title, body]) => (
               <li key={step} className="bg-background p-6">
                 <span className="text-xs text-primary">{step}</span>
@@ -465,6 +470,7 @@ export function PublicHome({ settings }: { settings: SiteSettings }) {
                       </article>
                     ))
                   )}
+                  <DepositProofForm plan={selectedPlan} reference={reference} />
                 </div>
               </div>
             ) : null}

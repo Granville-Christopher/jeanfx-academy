@@ -84,7 +84,7 @@ export async function writeSettings(input: unknown): Promise<SiteSettings> {
   return parsed.data;
 }
 
-async function collection() {
+async function mongoClient(): Promise<MongoClientType | null> {
   const uri = process.env["MONGODB_URI"]?.trim();
   if (!uri) return null;
   if (!globalForMongo.deskMongo) {
@@ -98,10 +98,17 @@ async function collection() {
       if (globalForMongo.deskMongo === connecting) delete globalForMongo.deskMongo;
     });
   }
-  const client = await globalForMongo.deskMongo;
-  return client
-    .db("academy")
-    .collection<{ _id: string; settings: unknown; updatedAt?: string }>("siteSettings");
+  return globalForMongo.deskMongo;
+}
+
+export async function academyCollection<T extends { _id: string }>(name: string) {
+  const client = await mongoClient();
+  if (!client) return null;
+  return client.db("academy").collection<T>(name);
+}
+
+async function collection() {
+  return academyCollection<{ _id: string; settings: unknown; updatedAt?: string }>("siteSettings");
 }
 
 async function readMongoSettings(): Promise<unknown> {

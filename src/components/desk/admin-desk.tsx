@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,7 +7,14 @@ import { DeskMark } from "@/components/desk/desk-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { loginDesk, logoutDeskSession, saveDeskSettings } from "@/lib/desk.functions";
+import {
+  getDepositProofs,
+  loginDesk,
+  logoutDeskSession,
+  openDepositProof,
+  saveDeskSettings,
+} from "@/lib/desk.functions";
+import type { DepositProofSummary } from "@/lib/deposit-proof";
 import {
   formatUsd,
   monthlyUsd,
@@ -22,6 +29,7 @@ const tabs = [
   ["plans", "Plans"],
   ["wallets", "Wallets"],
   ["results", "Results"],
+  ["proofs", "Proofs"],
 ] as const;
 
 type Tab = (typeof tabs)[number][0];
@@ -112,7 +120,9 @@ function DeskEditor({ initial }: { initial: SiteSettings }) {
     setDraft((current) => ({ ...current, ...patch }));
 
   return (
-    <main className="min-h-screen bg-background pb-28 text-foreground">
+    <main
+      className={`min-h-screen bg-background text-foreground ${tab === "proofs" ? "" : "pb-28"}`}
+    >
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -172,50 +182,161 @@ function DeskEditor({ initial }: { initial: SiteSettings }) {
           {tab === "plans" ? <PlanFields draft={draft} update={update} /> : null}
           {tab === "wallets" ? <WalletFields draft={draft} update={update} /> : null}
           {tab === "results" ? <ResultFields draft={draft} update={update} /> : null}
+          {tab === "proofs" ? <ProofFields /> : null}
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">Saving updates the public site.</p>
-          )}
-          <Button
-            type="button"
-            className="h-11 rounded-none px-6 sm:ml-auto"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true);
-              setError("");
-              try {
-                const result = await saveDeskSettings({ data: draft });
-                if (!result.ok) {
-                  setError(result.error);
-                  return;
-                }
-                setDraft(result.settings);
-                toast.success("Saved. The public site is using these settings.");
+      {tab === "proofs" ? null : (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Saving updates the public site.</p>
+            )}
+            <Button
+              type="button"
+              className="h-11 rounded-none px-6 sm:ml-auto"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                setError("");
                 try {
-                  await router.invalidate();
-                } catch (refreshError) {
-                  console.error(refreshError);
+                  const result = await saveDeskSettings({ data: draft });
+                  if (!result.ok) {
+                    setError(result.error);
+                    return;
+                  }
+                  setDraft(result.settings);
+                  toast.success("Saved. The public site is using these settings.");
+                  try {
+                    await router.invalidate();
+                  } catch (refreshError) {
+                    console.error(refreshError);
+                  }
+                } catch (saveError) {
+                  setError(saveFailureMessage(saveError));
+                } finally {
+                  setSaving(false);
                 }
-              } catch (saveError) {
-                setError(saveFailureMessage(saveError));
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            {saving ? "Saving…" : "Save desk settings"}
-          </Button>
+              }}
+            >
+              {saving ? "Saving…" : "Save desk settings"}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </main>
+  );
+}
+
+function ProofFields() {
+  const [proofs, setProofs] = useState<DepositProofSummary[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+  const [openingId, setOpeningId] = useState("");
+  const [open, setOpen] = useState<{
+    id: string;
+    dataUrl: string;
+    contentType: string;
+    fileName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDepositProofs()
+      .then((result) => {
+        if (cancelled) return;
+        if (!result.ok) {
+          setStatus("error");
+          setError(result.error);
+          return;
+        }
+        setProofs(result.proofs);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStatus("error");
+        setError("The desk could not load deposit proofs.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <section className="grid gap-6">
+      <Intro
+        title="Deposit proofs"
+        body="Files students upload beside the payment wallet are stored in the database. Open one to see the transfer receipt."
+      />
+      {status === "loading" ? (
+        <p className="text-sm text-muted-foreground">Loading proofs…</p>
+      ) : null}
+      {status === "error" ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      {status === "ready" && proofs.length === 0 ? (
+        <p className="border border-dashed border-border px-5 py-8 text-sm leading-6 text-muted-foreground">
+          No deposit proofs yet. They appear here after a student uploads a receipt.
+        </p>
+      ) : null}
+      <div className="grid gap-4">
+        {proofs.map((proof) => (
+          <article key={proof.id} className="grid gap-3 border border-border p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base text-foreground">
+                  {proof.planName} · {formatUsd(proof.amountUsd)}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {new Date(proof.createdAt).toLocaleString("en-US", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="border border-primary px-3 py-2 text-xs uppercase tracking-[0.14em] text-primary"
+                disabled={openingId === proof.id}
+                onClick={async () => {
+                  setOpeningId(proof.id);
+                  try {
+                    const result = await openDepositProof({ data: { id: proof.id } });
+                    if (!result.ok) {
+                      toast.error(result.error);
+                      return;
+                    }
+                    setOpen({ id: proof.id, ...result.proof });
+                  } catch {
+                    toast.error("That proof could not be opened.");
+                  } finally {
+                    setOpeningId("");
+                  }
+                }}
+              >
+                {openingId === proof.id ? "Opening…" : "View receipt"}
+              </button>
+            </div>
+            <p className="break-all font-mono text-sm text-foreground">{proof.reference}</p>
+            <p className="text-sm text-muted-foreground">{proof.fileName}</p>
+            {open?.id === proof.id ? (
+              open.contentType === "application/pdf" ? (
+                <iframe title={open.fileName} src={open.dataUrl} className="h-80 w-full bg-white" />
+              ) : (
+                <img src={open.dataUrl} alt="" className="max-h-80 bg-white object-contain" />
+              )
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
